@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 munozariel
+Copyright (c) 2026 Ariel Muñoz
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+La documentación (README.md y carpeta docs/) y las imágenes están bajo la licencia
+Creative Commons Atribución-CompartirIgual 4.0 Internacional (CC BY-SA 4.0):
+https://creativecommons.org/licenses/by-sa/4.0/deed.es

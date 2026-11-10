@@ -1,0 +1,10 @@
+# Credenciales: nunca al repositorio
+secretos.h
+.env
+
+# Datos locales del servidor
+servidor/data-local/
+
+# Sistema
+.DS_Store
+Thumbs.db
