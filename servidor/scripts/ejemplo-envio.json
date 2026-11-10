@@ -1,0 +1,18 @@
+{
+  "v": 1,
+  "kit": "MOTOR-001",
+  "minutos": [
+    {
+      "ts": 1793980800, "n": 60, "marcha": 60,
+      "t1": 38.4, "t1max": 38.6, "t2": 24.1,
+      "i": 2.41, "imin": 2.35, "imax": 2.52,
+      "rpm": 2862,
+      "rx": 0.031, "ry": 0.028, "rz": 0.044, "rzmax": 0.051, "pico": 0.162,
+      "horas": 12.4, "arr": 7
+    }
+  ],
+  "eventos": [
+    { "ts": 1793980815, "tipo": "ALARMA_TEMP", "origen": "uno", "detalle": "amarillo T1=61.2" }
+  ],
+  "salud": { "ts": 1793980860, "rssi": -61, "heap": 182340, "uptime": 86400, "err": 0, "sd": true }
+}

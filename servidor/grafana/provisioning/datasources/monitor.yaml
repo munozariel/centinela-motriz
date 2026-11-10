@@ -1,0 +1,17 @@
+# Fuente de datos creada automáticamente al arrancar Grafana (usuario de solo lectura)
+apiVersion: 1
+
+datasources:
+  - name: Monitor
+    uid: monitor-pg
+    type: grafana-postgresql-datasource
+    url: postgres:5432
+    user: grafana_lector
+    isDefault: true
+    jsonData:
+      database: monitor
+      sslmode: disable
+      postgresVersion: 1600
+      timescaledb: false
+    secureJsonData:
+      password: ${GRAFANA_DB_PASSWORD}

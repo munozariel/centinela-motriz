@@ -1,0 +1,303 @@
+{
+  "name": "Bot Telegram - Consultas",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -600,
+        0
+      ],
+      "name": "Telegram Trigger",
+      "webhookId": "a07cb191-474a-4e48-b3ee-9c200ee85e36"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ String($json.message.chat.id) }}",
+              "rightValue": "TU_CHAT_ID",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -380,
+        0
+      ],
+      "name": "¿Es mi chat?"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "=Sos el asistente de mantenimiento predictivo de un kit de monitoreo de motores eléctricos (proyecto final del curso de Automatización y Robótica de Fundación YPF). Respondés por Telegram, en español argentino, claro, técnico y breve, a un técnico de mantenimiento.\n\nFecha y hora actual: {{ $now.setZone('America/Argentina/Buenos_Aires').toFormat('dd/MM/yyyy HH:mm') }}\n\nHERRAMIENTAS (consultan la base PostgreSQL; son de solo lectura)\n- estado_motores: estado actual de TODOS los motores (semáforo, motivos, valores de 24 h, cambio vs semana anterior, tendencia, mantenimiento, salud del kit). Usala primero casi siempre.\n- tendencia_diaria: promedios por día de los últimos 14 días de un motor (o \"TODOS\"). Para preguntas como \"¿subió la vibración?\" o \"¿cómo viene la temperatura?\".\n- eventos_recientes: alarmas, reconocimientos y arranques del kit de los últimos 7 días.\n- mantenimientos: historial de mantenimientos cargados (fecha, horas, tipo, tareas, estado, observaciones).\n\nREGLAS\n1. Respondé SOLO con datos que devuelvan las herramientas. Los números ya vienen calculados: no recalcules promedios, no inventes valores ni fechas. Si falta un dato, decilo.\n2. El semáforo lo decide el servidor (campo \"estado\"): ROJO 🔴, AMARILLO 🟡, VERDE 🟢, SIN_DATOS ⚪. No lo cambies.\n3. Si el usuario no dice qué motor y hay uno solo, usá ese. Si hay varios, respondé por todos de forma resumida o preguntá cuál.\n4. Los IDs de motor tienen el formato MOTOR-001. Si el usuario dice \"el 1\" o \"la cortadora\", buscá el ID con estado_motores (campos kit_id y nombre).\n5. Explicá causas probables solo a partir de los motivos que marca el servidor o de una tendencia clara en tendencia_diaria. Siempre como \"posible\", nunca como diagnóstico seguro.\n6. El kit nunca detiene el motor. Recomendá inspecciones o planificar el mantenimiento; no des órdenes de parada.\n7. Formato: TEXTO PLANO para Telegram. Prohibido Markdown (nada de asteriscos, guiones bajos, numerales ni backticks). Emojis del semáforo y saltos de línea. Máximo 1200 caracteres.\n8. Si te preguntan algo que no tiene que ver con los motores, el kit o su mantenimiento, decí amablemente que solo respondés sobre eso.\n9. Si el usuario escribe /start o \"ayuda\", explicá en 4 líneas qué podés responder, con ejemplos: \"¿cómo están los motores?\", \"¿cuándo le toca mantenimiento al MOTOR-001?\", \"¿cómo vino la vibración esta semana?\", \"¿hubo alarmas hoy?\".\n\nGUÍA DE INTERPRETACIÓN\n- Vibración (rz, en g): es la vibración general del eje radial. No tiene un límite fijo: lo que importa es si sube respecto de la semana anterior (puntaje z_rz). Un aumento puede venir de desbalance, holgura de la base o los bulones, desalineación, rodamiento o roce. Sugerí revisar fijaciones, acople, carga y escuchar el rodamiento.\n- Pico (pico_max_g): la sacudida más fuerte del eje radial. Si sube el pico pero no rz, hubo golpes aislados.\n- dT (carcasa menos ambiente) alto con corriente normal: ventilación tapada, suciedad o rodamiento. Con corriente alta: sobrecarga.\n- Corriente sobre la In de placa: sobrecarga, tensión baja o freno mecánico.\n- Puntaje z: cuánto se aleja de la semana anterior. Es un cambio, no necesariamente una falla.\n- \"h_hasta_alarma_dt\": horas de marcha estimadas por tendencia hasta que el calentamiento llegue a alarma. Es una estimación.\n- SIN_DATOS: el kit no reporta (alimentación, WiFi, ESP32). No es lo mismo que motor parado."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -120,
+        0
+      ],
+      "name": "Agente de mantenimiento"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -300,
+        260
+      ],
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -160,
+        260
+      ],
+      "name": "Memoria (10 mensajes)"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;') }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        0
+      ],
+      "name": "Enviar por Telegram"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Estado actual de TODOS los motores: semáforo (estado), motivos_rojo y motivos_amarillo, valores de las últimas 24 h, cambio respecto de la semana anterior (puntajes z), tendencia del calentamiento, mantenimiento y salud del kit. Usala primero casi siempre.",
+        "operation": "executeQuery",
+        "query": "SELECT * FROM v_estado_motor ORDER BY kit_id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        260
+      ],
+      "name": "estado_motores"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Promedios por día de los últimos 14 días: horas de marcha, arranques, temperaturas, dT, corriente, vibración (rz y pico, en g) y RPM. Parámetro: el ID del motor (por ejemplo MOTOR-001) o TODOS.",
+        "operation": "executeQuery",
+        "query": "SELECT kit_id,\n       to_char((ts AT TIME ZONE 'America/Argentina/Buenos_Aires')::date, 'DD/MM/YYYY') AS dia,\n       round((sum(seg_marcha) / 3600.0)::numeric, 2)                                   AS horas_marcha,\n       max(arranques) - min(arranques)                                                 AS arranques,\n       round((avg(t1_avg) FILTER (WHERE seg_marcha >= 50))::numeric, 1)                AS t1_carcasa_c,\n       round(max(t1_max)::numeric, 1)                                                  AS t1_max_c,\n       round(avg(t2_avg)::numeric, 1)                                                  AS t2_ambiente_c,\n       round((avg(dt_avg) FILTER (WHERE seg_marcha >= 50))::numeric, 1)                AS dt_c,\n       round((avg(i_avg) FILTER (WHERE seg_marcha >= 50))::numeric, 2)                 AS i_a,\n       round((avg(rz_avg) FILTER (WHERE seg_marcha >= 50))::numeric, 3)                AS rz_g,\n       round((max(pico_max) FILTER (WHERE seg_marcha >= 50))::numeric, 3)              AS pico_max_g,\n       round((avg(rpm_avg) FILTER (WHERE seg_marcha >= 50 AND rpm_avg > 0))::numeric)  AS rpm\nFROM minuto\nWHERE ts >= now() - interval '14 days'\n  AND ($1::text = 'TODOS' OR kit_id = $1::text)\nGROUP BY kit_id, (ts AT TIME ZONE 'America/Argentina/Buenos_Aires')::date\nORDER BY kit_id, (ts AT TIME ZONE 'America/Argentina/Buenos_Aires')::date;",
+        "options": {
+          "queryReplacement": "={{ $fromAI('kit', 'ID del motor, por ejemplo MOTOR-001, o TODOS para todos los motores', 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        140,
+        260
+      ],
+      "name": "tendencia_diaria"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Eventos del kit de los últimos 7 días (alarmas, reconocimientos, arranques, ajustes de hora), del más nuevo al más viejo.",
+        "operation": "executeQuery",
+        "query": "SELECT kit_id,\n       to_char(ts AT TIME ZONE 'America/Argentina/Buenos_Aires', 'DD/MM/YYYY HH24:MI') AS fecha,\n       tipo, origen, detalle\nFROM evento\nWHERE ts >= now() - interval '7 days'\nORDER BY ts DESC\nLIMIT 50;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        280,
+        260
+      ],
+      "name": "eventos_recientes"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Historial de mantenimientos cargados (los 30 más recientes): fecha, horas, tipo, responsable, tareas, aislación, corriente, repuestos, estado, intervalo y observaciones.",
+        "operation": "executeQuery",
+        "query": "SELECT kit_id, id, to_char(fecha, 'DD/MM/YYYY HH24:MI') AS fecha, horas, tipo, responsable, tareas,\n       aislacion_mohm, corriente_a, repuestos, estado, intervalo_h, observaciones\nFROM mantenimiento\nORDER BY kit_id, id DESC\nLIMIT 30;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        420,
+        260
+      ],
+      "name": "mantenimientos"
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "¿Es mi chat?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es mi chat?": {
+      "main": [
+        [
+          {
+            "node": "Agente de mantenimiento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Agente de mantenimiento": {
+      "main": [
+        [
+          {
+            "node": "Enviar por Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente de mantenimiento",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria (10 mensajes)": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente de mantenimiento",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "estado_motores": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de mantenimiento",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tendencia_diaria": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de mantenimiento",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "eventos_recientes": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de mantenimiento",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mantenimientos": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de mantenimiento",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
+  "pinData": {}
+}

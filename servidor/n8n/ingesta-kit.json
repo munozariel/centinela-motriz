@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Ingesta kit",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "kit",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.2,
+        "position": [
+          -224,
+          0
+        ],
+        "name": "Webhook",
+        "webhookId": "4eb389e6-8583-4771-869d-ddd0e5558a36"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json.r }}",
+          "options": {
+            "responseCode": "={{ $json.r.ok ? 200 : ($json.r.error === 'NO_AUTORIZADO' ? 401 : 400) }}"
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
+        "position": [
+          224,
+          0
+        ],
+        "name": "Respond to Webhook"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT ingesta($1::jsonb, $2) AS r;",
+          "options": {
+            "queryReplacement": "={{ [ JSON.stringify($json.body), $json.headers['x-kit-token'] ] }}"
+          }
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.8,
+        "position": [
+          0,
+          0
+        ],
+        "name": "Postgres ingesta",
+        "credentials": {
+          "postgres": {
+            "name": "Monitor (monitor_app)"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Postgres ingesta",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Postgres ingesta": {
+        "main": [
+          [
+            {
+              "node": "Respond to Webhook",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1",
+      "binaryMode": "separate"
+    },
+    "active": false,
+    "pinData": {}
+  }
+]

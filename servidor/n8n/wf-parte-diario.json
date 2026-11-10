@@ -1,0 +1,169 @@
+{
+  "name": "Bot Telegram - Parte diario",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -600,
+        0
+      ],
+      "name": "Todos los días 8:00"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM v_estado_motor ORDER BY kit_id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.8,
+      "position": [
+        -380,
+        0
+      ],
+      "name": "Leer estado de motores"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Junta todas las filas de v_estado_motor en un solo texto para la IA\nconst filas = $input.all().map(i => i.json);\nreturn [{ json: { datos: JSON.stringify(filas, null, 1) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        0
+      ],
+      "name": "Juntar motores"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Datos de los motores (vista v_estado_motor, una fila por motor):\n{{ $json.datos }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Sos el asistente de mantenimiento predictivo de un kit de monitoreo de motores eléctricos (proyecto final del curso de Automatización y Robótica de Fundación YPF). Escribís en español argentino, claro y técnico, para un técnico de mantenimiento que lo lee en el celular.\n\nFecha y hora actual: {{ $now.setZone('America/Argentina/Buenos_Aires').toFormat('dd/MM/yyyy HH:mm') }}\n\nTU TAREA\nRedactar el PARTE DIARIO a partir de los datos que te pasa el servidor (vista v_estado_motor, una fila por motor). Los números ya están calculados: NO recalcules, NO estimes y NO inventes valores. Si un dato viene vacío (null), no lo menciones o decí \"sin dato\".\n\nREGLAS\n1. El semáforo lo decide el servidor (campo \"estado\"). Nunca lo cambies. ROJO = 🔴, AMARILLO = 🟡, VERDE = 🟢, SIN_DATOS = ⚪.\n2. Ordená los motores del peor al mejor: ROJO, AMARILLO, SIN_DATOS, VERDE.\n3. Para cada motor en ROJO o AMARILLO: explicá los \"motivos_rojo\" y \"motivos_amarillo\" en una o dos líneas, con la causa probable y una acción concreta de inspección. No sumes motivos que no estén en la lista.\n4. Para motores en VERDE: una sola línea (horas de marcha, arranques y próximo mantenimiento).\n5. SIN_DATOS: avisá que el kit no reporta desde \"ultimo_dato\" y que hay que revisar alimentación, WiFi o el ESP32. No es lo mismo que el motor esté parado.\n6. Si \"horas_hasta_mant\" existe, informá cuántas horas faltan y, si hay, \"dias_hasta_mant_estimado\". Si es negativo, está vencido.\n7. Si \"h_hasta_alarma_dt\" tiene valor, decí \"a este ritmo el calentamiento llegaría a alarma en ~N h de marcha\" y aclará que es una estimación por tendencia.\n8. El kit nunca detiene el motor. Recomendá inspeccionar o planificar; si hay ROJO, sugerí revisar antes de seguir operando, sin dar órdenes de parada.\n9. Formato: TEXTO PLANO para Telegram. Prohibido usar Markdown (nada de asteriscos, guiones bajos, numerales ni backticks). Usá emojis del semáforo y saltos de línea. Máximo 1500 caracteres en total.\n10. Cerrá con una sola línea de resumen general (por ejemplo \"1 motor para revisar hoy\").\n\nGUÍA DE INTERPRETACIÓN (solo para explicar los motivos que ya vienen marcados)\n- Vibración (rz, en g) más alta que la semana anterior: algo cambió en el motor o en su montaje. Causas posibles: desbalance (suciedad pegada en el rotor, cuchilla o ventilador), bulones o base flojos, desalineación del acople, rodamiento o roce. Revisar fijaciones y acople, escuchar el rodamiento y palpar la temperatura del lado del eje.\n- Calentamiento (dT = carcasa menos ambiente) alto con corriente normal: ventilación tapada, suciedad en aletas o rodamiento. Con corriente alta: sobrecarga.\n- Corriente sobre la In de placa: sobrecarga, tensión baja o problema mecánico que frena el eje.\n- Muchos arranques: cada arranque calienta el bobinado.\n- Puntaje z: cuántos desvíos se aleja del comportamiento de la semana anterior. Indica un cambio, no necesariamente una falla.\n\nFORMATO DE EJEMPLO\nParte diario 07/11 08:00\n\n🟡 MOTOR-001 Cortadora WEG 1 CV\nLa vibración subió a 0,081 g (la semana anterior 0,041 g). Posible desbalance o algo flojo: revisar bulones, acople y limpiar la cuchilla.\nMantenimiento: faltan 20 h (~2 días).\n\n🟢 MOTOR-002 Bomba: 6,1 h de marcha, 4 arranques. Mantenimiento en 80 h.\n\nResumen: 1 motor para revisar hoy."
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        60,
+        0
+      ],
+      "name": "Redactar parte"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        60,
+        220
+      ],
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "chatId": "TU_CHAT_ID",
+        "text": "={{ $json.text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;') }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        0
+      ],
+      "name": "Enviar por Telegram"
+    }
+  ],
+  "connections": {
+    "Todos los días 8:00": {
+      "main": [
+        [
+          {
+            "node": "Leer estado de motores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer estado de motores": {
+      "main": [
+        [
+          {
+            "node": "Juntar motores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Juntar motores": {
+      "main": [
+        [
+          {
+            "node": "Redactar parte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redactar parte": {
+      "main": [
+        [
+          {
+            "node": "Enviar por Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Redactar parte",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
+  "pinData": {}
+}

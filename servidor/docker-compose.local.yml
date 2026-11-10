@@ -1,0 +1,14 @@
+# Solo para probar en la PC, sin HTTPS:
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+# (o agregar COMPOSE_FILE=docker-compose.yml:docker-compose.local.yml en el .env)
+services:
+  n8n:
+    environment:
+      N8N_HOST: localhost
+      N8N_PROTOCOL: http
+      N8N_PROXY_HOPS: 0
+      N8N_SECURE_COOKIE: "false"
+      WEBHOOK_URL: http://localhost:5680/
+  grafana:
+    environment:
+      GF_SERVER_ROOT_URL: http://localhost:3300/
